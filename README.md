@@ -2,18 +2,17 @@
 
 Cross-Lingual Instruction Distillation for Low-Resource Expressive Emotional Text-to-Speech.
 
-A standalone static research demo with page-style navigation, the original method and evaluation figures, and 144 original audio samples. It does not run model inference.
+A standalone static research demo with page-style navigation, a 30-second introduction video, the original method and evaluation figures, and 144 original audio samples. It does not run model inference.
 
 ## Pages
 
-- Abstract — Korean abstract followed by the original English abstract.
-- Model Overview — the original CLID-TTS framework figure and caption.
+- Overview — introduction video, Korean and English abstracts, and the original CLID-TTS framework figure and caption.
 - Emotion Classification — the original objective and subjective confusion matrices.
 - Model Comparison — the original six-emotion comparison table, with expandable instructions and transcriptions.
 - Korean Instructions — the original 30-row table comparing CLID-TTS and Gemini.
 - Same Text — the original table with two fixed texts, six emotions, and two instruction variants per emotion.
 
-The simple header and comparison-table layouts follow the original demo; the top menu switches between pages. Audio metadata loads when its page is first opened. The systems shown in the evaluation figure differ from the audio-comparison systems. Same-text instructions change speaker traits and delivery as well as emotion.
+The simple header and comparison-table layouts follow the original demo; the top menu switches between pages. Legacy `#/method` links redirect to the combined Overview. The video uses native playback controls without autoplay, and media pauses when switching pages. Audio metadata loads when its page is first opened. The systems shown in the evaluation figure differ from the audio-comparison systems. Same-text instructions change speaker traits and delivery as well as emotion.
 
 ## Local preview
 
@@ -36,5 +35,7 @@ In **Settings → Pages**, choose **Deploy from a branch**, then **main / (root)
 - [Original demo](https://speechai-lab.github.io/demo/clid-tts/)
 - [Original code repository](https://github.com/SpeechAI-Lab/CLID-TTS) — may require access; the paper link was marked coming soon in the original demo.
 - `data/samples.js`, `audio/`, and `pics/` are copied from the existing CLID-TTS demo. Audio files and research figures are unchanged.
+- `video/emotional_tts_30s_sail_lab.mp4` is the supplied introduction video, copied without transcoding.
+- `video/introduction-poster.jpg` is its title frame at 2 seconds, shown before playback.
 
 Edit presentation in `index.html` and `assets/style.css`, navigation in `js/navigation.js`, and sample presentation in `js/audio.js`. Sample metadata remains in `data/samples.js`.

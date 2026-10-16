@@ -3,7 +3,8 @@
   const sections = [...document.querySelectorAll('.page-section')];
   const links = [...document.querySelectorAll('[data-route]')];
   const pages = new Set(sections.map(section => section.id));
-  const aliases = {'model-overview':'method','emotion-classification-results':'results','demo-samples':'comparison','korean-benchmark-samples':'benchmark','same-text-different-emotions':'control'};
+  const aliases = {'method':'overview','model-overview':'overview','emotion-classification-results':'results','demo-samples':'comparison','korean-benchmark-samples':'benchmark','same-text-different-emotions':'control'};
+  const paperTitle = document.querySelector('h1').textContent;
   let activePage;
   function showPage(initial) {
     const requested = location.hash.replace(/^#\/?/, '');
@@ -18,7 +19,7 @@
     });
     document.documentElement.classList.add('routed');
     document.documentElement.dataset.page = page;
-    document.title = 'CLID · ' + links.find(link => link.dataset.route === page).textContent;
+    document.title = page === 'overview' ? paperTitle : 'CLID · ' + links.find(link => link.dataset.route === page).textContent;
     if (!initial && activePage !== page) {
       document.getElementById(page).querySelector('h2').focus({preventScroll:true});
       window.scrollTo({top:0,behavior:'instant'});

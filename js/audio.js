@@ -20,8 +20,8 @@
   ];
 
   function pauseAll(except) {
-    document.querySelectorAll("audio[data-clid-player]").forEach((audio) => {
-      if (audio !== except && !audio.paused) audio.pause();
+    document.querySelectorAll("audio[data-clid-player], video[data-clid-player]").forEach((media) => {
+      if (media !== except && !media.paused) media.pause();
     });
   }
 
@@ -40,6 +40,16 @@
 
   window.CLIDAudio = { pauseAll, showPage };
   window.addEventListener("pagehide", () => pauseAll());
+
+  const introVideo = document.getElementById("intro-video");
+  const introError = document.getElementById("intro-video-error");
+  if (introVideo) {
+    introVideo.addEventListener("play", () => pauseAll(introVideo));
+    introVideo.addEventListener("loadedmetadata", () => { if (introError) introError.hidden = true; });
+    const showVideoError = () => { if (introError) introError.hidden = false; };
+    introVideo.addEventListener("error", showVideoError);
+    introVideo.querySelector("source")?.addEventListener("error", showVideoError);
+  }
 
   function showUnavailable(mount) {
     if (!mount) return;
