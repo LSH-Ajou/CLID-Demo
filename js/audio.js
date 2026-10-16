@@ -1,22 +1,23 @@
 (function () {
   "use strict";
 
-  const comparisonModels = [
-    { key: "clidTts", label: "CLID-TTS", note: "Proposed model" },
-    { key: "clidNoCfg", label: "CLID w/o CFG", note: "Ablation" },
-    { key: "qwen3VoiceDesign", label: "Qwen3-TTS-VoiceDesign", note: "Voice design baseline" },
-    { key: "gemini", label: "Gemini 3.1 Flash-TTS", note: "Baseline" },
-    { key: "voxcpm2", label: "VoxCPM2", note: "Baseline" },
-    { key: "gt", label: "GT", note: "Ground-truth recording" }
+  const samples = Array.isArray(window.CLID_TTS_SAMPLES) ? window.CLID_TTS_SAMPLES : [];
+  const koreanBenchmarkSamples = Array.isArray(window.CLID_TTS_KOREAN_BENCHMARK_SAMPLES)
+    ? window.CLID_TTS_KOREAN_BENCHMARK_SAMPLES
+    : [];
+  const sameTextDemo = window.CLID_TTS_SAME_TEXT_DEMO || {};
+  const sameTextItems = Array.isArray(sameTextDemo.texts) ? sameTextDemo.texts : [];
+  const sameTextInstructions = Array.isArray(sameTextDemo.instructions)
+    ? sameTextDemo.instructions
+    : [];
+  const modelColumns = [
+    { key: "gt", label: "GT" },
+    { key: "gemini", label: "Gemini 3.1 Flash-TTS" },
+    { key: "voxcpm2", label: "VoxCPM2" },
+    { key: "qwen3VoiceDesign", label: "Qwen3-TTS-VoiceDesign" },
+    { key: "clidNoCfg", label: "CLID w/o CFG" },
+    { key: "clidTts", label: "CLID-TTS" }
   ];
-  const pairedModels = [comparisonModels[0], comparisonModels[3]];
-
-  function element(tag, className, text) {
-    const node = document.createElement(tag);
-    if (className) node.className = className;
-    if (text !== undefined) node.textContent = text;
-    return node;
-  }
 
   function pauseAll(except) {
     document.querySelectorAll("audio[data-clid-player]").forEach((audio) => {
@@ -24,259 +25,455 @@
     });
   }
 
-  window.CLIDAudio = { pauseAll };
-  window.addEventListener("hashchange", () => pauseAll());
+  function showPage(page) {
+    pauseAll();
+    if (!["comparison", "benchmark", "control"].includes(page)) return;
+
+    const mount = document.getElementById(`${page}-demo`);
+    if (!mount) return;
+
+    mount.querySelectorAll("audio[data-src]").forEach((audio) => {
+      audio.preload = "metadata";
+      if (!audio.hasAttribute("src")) audio.src = audio.dataset.src;
+    });
+  }
+
+  window.CLIDAudio = { pauseAll, showPage };
   window.addEventListener("pagehide", () => pauseAll());
 
-  function emotionNames(items) {
-    return [...new Set(items.map((item) => item.emotion))];
+  function showUnavailable(mount) {
+    if (!mount) return;
+    const message = document.createElement("p");
+    message.className = "audio-missing";
+    message.setAttribute("role", "status");
+    message.textContent = "Audio samples are currently unavailable.";
+    mount.replaceChildren(message);
   }
 
-  function defaultEmotion(emotions) {
-    return emotions.includes("Happy") ? "Happy" : emotions[0];
-  }
-
-  function makeSelect(id, label, options, value) {
-    const field = element("div", "field");
-    const labelNode = element("label", "", label);
-    const select = element("select");
-    labelNode.htmlFor = id;
-    select.id = id;
-    options.forEach((option) => {
-      const node = element("option", "", option.label);
-      node.value = String(option.value);
-      select.append(node);
-    });
-    if (value !== undefined) select.value = String(value);
-    field.append(labelNode, select);
-    return { field, select };
-  }
-
-  function makeEmotionSelect(id, emotions) {
-    return makeSelect(id, "Emotion", emotions.map((emotion) => ({
-      label: emotion,
-      value: emotion
-    })), defaultEmotion(emotions));
-  }
-
-  function makeStatus(id) {
-    const status = element("p", "demo-status");
-    status.id = id;
-    status.setAttribute("role", "status");
-    status.setAttribute("aria-live", "polite");
-    status.setAttribute("aria-atomic", "true");
-    return status;
-  }
-
-  function makeSpokenText(text) {
-    const context = element("div", "sample-context");
-    const spoken = element("p", "spoken-text", text);
-    spoken.lang = "ko";
-    context.append(element("p", "eyebrow", "Spoken text"), spoken);
-    return context;
-  }
-
-  function makeInstruction(instruction) {
-    const block = element("div", "instruction-block");
-    const korean = element("p", "", instruction.instructionKo || "");
-    korean.lang = "ko";
-    block.append(element("p", "eyebrow", "Korean instruction"), korean);
-
-    if (instruction.instructionEn) {
-      const translation = element("details", "translation");
-      const summary = element("summary", "", "English translation · Not used for inference");
-      const english = element("p", "", instruction.instructionEn);
-      english.lang = "en";
-      translation.append(summary, english);
-      block.append(translation);
+  function makeAudioCell(path, label, isOurs) {
+    const cell = document.createElement("td");
+    cell.className = "audio-cell";
+    if (isOurs) {
+      cell.classList.add("ours-cell");
     }
-    return block;
-  }
-
-  function makePlayer(model, path, sampleLabel, headingTag) {
-    const card = element("div", "player-card");
-    if (model.key === "clidTts") card.classList.add("is-ours");
-    card.append(
-      element(headingTag || "h3", "player-label", model.label),
-      element("p", "player-meta", model.note)
-    );
 
     if (!path) {
-      card.append(element("p", "audio-error", "Audio is not available for this sample."));
-      return card;
+      const missing = document.createElement("span");
+      missing.className = "audio-missing";
+      missing.textContent = "Not available";
+      cell.append(missing);
+      return cell;
     }
 
-    const audio = element("audio");
-    const error = element("p", "audio-error", "This audio could not be loaded. Please refresh the page and try again.");
+    const audio = document.createElement("audio");
+    const error = document.createElement("span");
+
     audio.controls = true;
-    audio.preload = "metadata";
+    audio.preload = "none";
     audio.dataset.clidPlayer = "";
-    audio.setAttribute("aria-label", `${model.label} — ${sampleLabel}`);
-    audio.src = path;
+    audio.dataset.src = path;
+    audio.setAttribute("aria-label", label);
+    audio.textContent = "Your browser does not support audio playback.";
+    error.className = "audio-missing";
     error.hidden = true;
     error.setAttribute("role", "status");
-    audio.append(document.createTextNode("Your browser does not support audio playback."));
+    error.textContent = "This audio could not be loaded. Please refresh and try again.";
     audio.addEventListener("play", () => pauseAll(audio));
     audio.addEventListener("error", () => { error.hidden = false; });
-    audio.addEventListener("loadeddata", () => { error.hidden = true; });
-    card.append(audio, error);
-    return card;
+    audio.addEventListener("loadedmetadata", () => { error.hidden = true; });
+    cell.append(audio, error);
+    return cell;
   }
 
-  function makePlayerGrid(models, paths, sampleLabel, headingTag) {
-    const grid = element("div", "player-grid");
-    models.forEach((model) => {
-      grid.append(makePlayer(model, paths[model.key], sampleLabel, headingTag));
+  function makeDetailItem(label, value, className, note) {
+    const item = document.createElement("div");
+    const term = document.createElement("dt");
+    const description = document.createElement("dd");
+
+    item.className = "detail-item";
+    if (className) {
+      item.classList.add(className);
+    }
+
+    term.textContent = label;
+    description.textContent = value || "";
+    description.lang = label === "English Instruction" ? "en" : "ko";
+
+    if (note) {
+      const noteElement = document.createElement("span");
+      noteElement.className = "unused-note";
+      noteElement.textContent = note;
+      term.append(noteElement);
+    }
+
+    item.append(term, description);
+    return item;
+  }
+
+  function makeEmotionButton(sample, detailsId) {
+    const button = document.createElement("button");
+    const label = document.createElement("span");
+    const chevron = document.createElement("span");
+    const accessibleAction = document.createElement("span");
+
+    button.type = "button";
+    button.className = "emotion-toggle";
+    button.setAttribute("aria-expanded", "false");
+    button.setAttribute("aria-controls", detailsId);
+
+    label.textContent = sample.emotion;
+    chevron.className = "emotion-chevron";
+    chevron.setAttribute("aria-hidden", "true");
+    chevron.textContent = "⌄";
+    accessibleAction.className = "visually-hidden emotion-action";
+    accessibleAction.textContent = ". Show instructions and transcription";
+
+    button.append(label, chevron, accessibleAction);
+    return button;
+  }
+
+  function makeSampleRows(sample, index) {
+    const sampleLabel = sample.id || `sample ${index + 1}`;
+    const detailsId = `${sampleLabel.replace(/[^a-zA-Z0-9_-]/g, "-")}-details`;
+    const audioRow = document.createElement("tr");
+    const emotionCell = document.createElement("th");
+    const detailsRow = document.createElement("tr");
+    const detailsCell = document.createElement("td");
+    const details = document.createElement("dl");
+    const emotionButton = makeEmotionButton(sample, detailsId);
+
+    audioRow.className = "sample-audio-row";
+    emotionCell.scope = "row";
+    emotionCell.className = "emotion-cell";
+    emotionCell.append(emotionButton);
+    audioRow.append(emotionCell);
+
+    modelColumns.forEach((model) => {
+      const audioPath = sample.audio && sample.audio[model.key];
+      audioRow.append(makeAudioCell(
+        audioPath,
+        `Play ${model.label} audio for ${sample.emotion}`,
+        model.key === "clidTts"
+      ));
     });
-    return grid;
+
+    detailsRow.id = detailsId;
+    detailsRow.className = "sample-detail-row";
+    detailsRow.hidden = true;
+    detailsCell.colSpan = modelColumns.length + 1;
+    details.className = "sample-details";
+    details.append(makeDetailItem("Instruction-ko", sample.instructionKo));
+    details.append(makeDetailItem(
+      "English Instruction",
+      sample.instructionEn,
+      "unused-instruction",
+      "Not used for inference"
+    ));
+    details.append(makeDetailItem("Transcription", sample.text));
+    detailsCell.append(details);
+    detailsRow.append(detailsCell);
+
+    emotionButton.addEventListener("click", () => {
+      const willOpen = detailsRow.hidden;
+      detailsRow.hidden = !willOpen;
+      emotionButton.setAttribute("aria-expanded", String(willOpen));
+      emotionButton.classList.toggle("is-open", willOpen);
+      emotionButton.querySelector(".emotion-action").textContent = willOpen
+        ? ". Hide instructions and transcription"
+        : ". Show instructions and transcription";
+    });
+
+    return [audioRow, detailsRow];
   }
 
-  function unavailable(mount) {
-    mount.replaceChildren(element("p", "demo-status", "Audio samples are currently unavailable."));
+  function makeComparisonTable() {
+    const wrap = document.createElement("div");
+    const table = document.createElement("table");
+    const colgroup = document.createElement("colgroup");
+    const emotionColumn = document.createElement("col");
+    const head = document.createElement("thead");
+    const headRow = document.createElement("tr");
+    const emotionHeading = document.createElement("th");
+    const body = document.createElement("tbody");
+
+    wrap.className = "comparison-wrap";
+    table.className = "comparison-table";
+    table.setAttribute("aria-label", "Audio comparison by emotion and model");
+
+    emotionColumn.className = "emotion-column";
+    colgroup.append(emotionColumn);
+    modelColumns.forEach(() => colgroup.append(document.createElement("col")));
+
+    emotionHeading.scope = "col";
+    emotionHeading.textContent = "Emotion";
+    headRow.append(emotionHeading);
+
+    modelColumns.forEach((model) => {
+      const heading = document.createElement("th");
+      heading.scope = "col";
+      heading.className = "model-heading";
+      heading.textContent = model.label;
+      if (model.key === "clidTts") {
+        heading.classList.add("ours-heading");
+      }
+      headRow.append(heading);
+    });
+
+    samples.forEach((sample, index) => body.append(...makeSampleRows(sample, index)));
+    head.append(headRow);
+    table.append(colgroup, head, body);
+    wrap.append(table);
+    return wrap;
   }
 
-  function mountComparison(samples) {
-    const mount = document.getElementById("comparison-demo");
-    if (!mount) return;
-    if (!samples.length) return unavailable(mount);
+  function renderSamples() {
+    const sampleList = document.getElementById("comparison-demo");
 
-    const emotions = emotionNames(samples);
-    const { field, select } = makeEmotionSelect("comparison-emotion", emotions);
-    const toolbar = element("div", "demo-toolbar");
-    const status = makeStatus("comparison-status");
-    const content = element("div");
-    select.setAttribute("aria-describedby", status.id);
-    toolbar.append(field);
-    mount.replaceChildren(toolbar, status, content);
-
-    function render() {
-      pauseAll();
-      const sample = samples.find((item) => item.emotion === select.value);
-      if (!sample) return;
-      content.replaceChildren(
-        makeSpokenText(sample.text),
-        makeInstruction(sample),
-        makePlayerGrid(comparisonModels, sample.audio || {}, `${sample.emotion} comparison`)
-      );
-      status.textContent = `${sample.emotion} · 6 models · ${emotions.length} emotions available`;
+    if (!sampleList || samples.length === 0) {
+      showUnavailable(sampleList);
+      return;
     }
 
-    select.addEventListener("change", render);
-    render();
+    sampleList.replaceChildren(makeComparisonTable());
   }
 
-  function mountBenchmark(samples) {
-    const mount = document.getElementById("benchmark-demo");
-    if (!mount) return;
-    if (!samples.length) return unavailable(mount);
+  function makeBenchmarkHeading(label, note) {
+    const heading = document.createElement("th");
+    heading.scope = "col";
+    heading.textContent = label;
 
-    const emotions = emotionNames(samples);
-    const emotionControl = makeEmotionSelect("benchmark-emotion", emotions);
-    const sampleControl = makeSelect("benchmark-sample", "Sample", []);
-    const toolbar = element("div", "demo-toolbar");
-    const status = makeStatus("benchmark-status");
-    const content = element("div");
-    let filtered = [];
-    emotionControl.select.setAttribute("aria-describedby", status.id);
-    sampleControl.select.setAttribute("aria-describedby", status.id);
-    toolbar.append(emotionControl.field, sampleControl.field);
-    mount.replaceChildren(toolbar, status, content);
-
-    function render() {
-      pauseAll();
-      const index = Number(sampleControl.select.value);
-      const sample = filtered[index];
-      if (!sample) return;
-      content.replaceChildren(
-        makeSpokenText(sample.text),
-        makeInstruction(sample),
-        makePlayerGrid(pairedModels, sample.audio || {}, `${sample.emotion}, sample ${index + 1}`)
-      );
-      status.textContent = `${sample.emotion} · Sample ${index + 1} of ${filtered.length} · 2 models · ${samples.length} samples available`;
+    if (note) {
+      const noteElement = document.createElement("span");
+      noteElement.className = "column-note";
+      noteElement.textContent = note;
+      heading.append(noteElement);
     }
 
-    function changeEmotion() {
-      filtered = samples.filter((sample) => sample.emotion === emotionControl.select.value);
-      sampleControl.select.replaceChildren(...filtered.map((sample, index) => {
-        const option = element("option", "", `Sample ${index + 1}`);
-        option.value = String(index);
-        return option;
-      }));
-      sampleControl.select.value = "0";
-      render();
-    }
-
-    emotionControl.select.addEventListener("change", changeEmotion);
-    sampleControl.select.addEventListener("change", render);
-    changeEmotion();
+    return heading;
   }
 
-  function mountControl(demo) {
-    const mount = document.getElementById("control-demo");
-    if (!mount) return;
-    const texts = Array.isArray(demo.texts) ? demo.texts : [];
-    const instructions = Array.isArray(demo.instructions) ? demo.instructions : [];
-    if (!texts.length || !instructions.length) return unavailable(mount);
+  function makeKoreanBenchmarkTable() {
+    const wrap = document.createElement("div");
+    const table = document.createElement("table");
+    const colgroup = document.createElement("colgroup");
+    const head = document.createElement("thead");
+    const headRow = document.createElement("tr");
+    const body = document.createElement("tbody");
+    const columns = [
+      "emotion",
+      "ko",
+      "en",
+      "text",
+      "audio",
+      "audio"
+    ];
+    const groups = [];
 
-    const emotions = emotionNames(instructions);
-    const textControl = makeSelect("control-text", "Text", texts.map((item, index) => ({
-      label: `Text ${index + 1}`,
-      value: index
-    })), 0);
-    const emotionControl = makeEmotionSelect("control-emotion", emotions);
-    const toolbar = element("div", "demo-toolbar");
-    const status = makeStatus("control-status");
-    const content = element("div");
-    textControl.select.setAttribute("aria-describedby", status.id);
-    emotionControl.select.setAttribute("aria-describedby", status.id);
-    toolbar.append(textControl.field, emotionControl.field);
-    mount.replaceChildren(toolbar, status, content);
+    columns.forEach((className) => {
+      const column = document.createElement("col");
+      column.className = `benchmark-${className}-column`;
+      colgroup.append(column);
+    });
 
-    function render() {
-      pauseAll();
-      const textIndex = Number(textControl.select.value);
-      const text = texts[textIndex];
-      const emotion = emotionControl.select.value;
-      const selectedInstructions = instructions.filter((item) => item.emotion === emotion);
-      if (!text) return;
-      const stack = element("div", "variant-stack");
+    headRow.append(
+      makeBenchmarkHeading("Emotion"),
+      makeBenchmarkHeading("Korean Instruction"),
+      makeBenchmarkHeading("English Instruction", "Not used for inference"),
+      makeBenchmarkHeading("Text"),
+      makeBenchmarkHeading("CLID-TTS"),
+      makeBenchmarkHeading("Gemini 3.1 Flash-TTS")
+    );
 
-      selectedInstructions.forEach((instruction) => {
-        const variant = Number(instruction.variant);
-        const ordinal = 6 + textIndex * 2 + variant;
-        const panel = element("section", "variant-panel");
-        const heading = element("h3", "", `Instruction ${variant}`);
-        heading.id = `control-variant-${variant}`;
-        panel.setAttribute("aria-labelledby", heading.id);
-        panel.append(
-          heading,
-          makeInstruction(instruction),
-          makePlayerGrid(pairedModels, {
-            clidTts: `audio/sec3_${instruction.key}_${ordinal}.wav`,
-            gemini: `audio/sec3_${instruction.key}_${ordinal}_gemini.wav`
-          }, `text ${textIndex + 1}, ${emotion}, instruction ${variant}`, "h4")
+    koreanBenchmarkSamples.forEach((sample) => {
+      const previous = groups[groups.length - 1];
+      if (previous && previous.emotion === sample.emotion) {
+        previous.samples.push(sample);
+      } else {
+        groups.push({ emotion: sample.emotion, samples: [sample] });
+      }
+    });
+
+    groups.forEach((group) => {
+      group.samples.forEach((sample, index) => {
+        const row = document.createElement("tr");
+        const koCell = document.createElement("td");
+        const enCell = document.createElement("td");
+        const textCell = document.createElement("td");
+        const audio = sample.audio || {};
+        const clidAudioCell = makeAudioCell(
+          audio.clidTts,
+          `Play CLID-TTS audio for ${group.emotion}, sample ${index + 1}`,
+          true
         );
-        stack.append(panel);
+        const geminiAudioCell = makeAudioCell(
+          audio.gemini,
+          `Play Gemini 3.1 Flash-TTS audio for ${group.emotion}, sample ${index + 1}`,
+          false
+        );
+
+        if (index === 0) {
+          const emotionCell = document.createElement("th");
+          emotionCell.scope = "rowgroup";
+          emotionCell.rowSpan = group.samples.length;
+          emotionCell.className = "benchmark-emotion-cell";
+          emotionCell.textContent = group.emotion;
+          row.append(emotionCell);
+        }
+
+        koCell.className = "benchmark-copy-cell";
+        koCell.lang = "ko";
+        koCell.textContent = sample.instructionKo;
+        enCell.className = "benchmark-copy-cell benchmark-en-cell";
+        enCell.lang = "en";
+        enCell.textContent = sample.instructionEn;
+        textCell.className = "benchmark-copy-cell benchmark-text-cell";
+        textCell.lang = "ko";
+        textCell.textContent = sample.text;
+        clidAudioCell.classList.add("benchmark-audio-cell", "benchmark-clid-cell");
+        geminiAudioCell.classList.add("benchmark-audio-cell");
+        row.append(
+          koCell,
+          enCell,
+          textCell,
+          clidAudioCell,
+          geminiAudioCell
+        );
+        body.append(row);
       });
+    });
 
-      content.replaceChildren(makeSpokenText(text.text), stack);
-      status.textContent = `Text ${textIndex + 1} of ${texts.length} · ${emotion} · ${selectedInstructions.length} instructions · 2 models · ${emotions.length} emotions available`;
+    head.append(headRow);
+    table.className = "benchmark-sample-table";
+    table.setAttribute("aria-label", "CLID-TTS and Gemini 3.1 Flash-TTS comparison using the same Korean benchmark texts and instructions");
+    table.append(colgroup, head, body);
+    wrap.className = "benchmark-sample-wrap";
+    wrap.append(table);
+    return wrap;
+  }
+
+  function renderKoreanBenchmarkSamples() {
+    const sampleList = document.getElementById("benchmark-demo");
+    if (!sampleList || koreanBenchmarkSamples.length === 0) {
+      showUnavailable(sampleList);
+      return;
     }
-
-    textControl.select.addEventListener("change", render);
-    emotionControl.select.addEventListener("change", render);
-    render();
+    sampleList.replaceChildren(makeKoreanBenchmarkTable());
   }
 
-  function init() {
-    mountComparison(Array.isArray(window.CLID_TTS_SAMPLES) ? window.CLID_TTS_SAMPLES : []);
-    mountBenchmark(Array.isArray(window.CLID_TTS_KOREAN_BENCHMARK_SAMPLES) ? window.CLID_TTS_KOREAN_BENCHMARK_SAMPLES : []);
-    mountControl(window.CLID_TTS_SAME_TEXT_DEMO || {});
+  function makeSameTextTable() {
+    const wrap = document.createElement("div");
+    const table = document.createElement("table");
+    const colgroup = document.createElement("colgroup");
+    const head = document.createElement("thead");
+    const headRow = document.createElement("tr");
+    const body = document.createElement("tbody");
+    const emotionGroups = [];
+
+    ["text", "emotion", "instruction", "audio", "audio"].forEach((className) => {
+      const column = document.createElement("col");
+      column.className = `same-text-${className}-column`;
+      colgroup.append(column);
+    });
+
+    headRow.append(
+      makeBenchmarkHeading("Text"),
+      makeBenchmarkHeading("Emotion"),
+      makeBenchmarkHeading("Korean Instruction"),
+      makeBenchmarkHeading("CLID-TTS"),
+      makeBenchmarkHeading("Gemini 3.1 Flash-TTS")
+    );
+
+    sameTextInstructions.forEach((instruction) => {
+      const previous = emotionGroups[emotionGroups.length - 1];
+      if (previous && previous.emotion === instruction.emotion) {
+        previous.instructions.push(instruction);
+      } else {
+        emotionGroups.push({
+          emotion: instruction.emotion,
+          instructions: [instruction]
+        });
+      }
+    });
+
+    sameTextItems.forEach((textItem, textIndex) => {
+      let rowIndex = 0;
+      emotionGroups.forEach((group) => {
+        group.instructions.forEach((instruction, instructionIndex) => {
+          const row = document.createElement("tr");
+          const instructionCell = document.createElement("td");
+          const sampleOrdinal = 6 + textIndex * 2 + Number(instruction.variant);
+          const audioPath = `audio/sec3_${instruction.key}_${sampleOrdinal}.wav`;
+          const audioCell = makeAudioCell(
+            audioPath,
+            `Play CLID-TTS ${group.emotion} variant ${instruction.variant} for text ${textIndex + 1}`,
+            true
+          );
+          const geminiAudioVersion = instruction.key === "sad" && Number(instruction.variant) === 1
+            ? "?v=sad-regen-20260917"
+            : "";
+          const geminiAudioCell = makeAudioCell(
+            `audio/sec3_${instruction.key}_${sampleOrdinal}_gemini.wav${geminiAudioVersion}`,
+            `Play Gemini 3.1 Flash-TTS ${group.emotion} variant ${instruction.variant} for text ${textIndex + 1}`,
+            false
+          );
+
+          if (textIndex > 0 && rowIndex === 0) {
+            row.classList.add("same-text-group-start");
+          }
+
+          if (rowIndex === 0) {
+            const textCell = document.createElement("th");
+            textCell.scope = "rowgroup";
+            textCell.rowSpan = sameTextInstructions.length;
+            textCell.className = "same-text-copy-cell";
+            textCell.lang = "ko";
+            textCell.textContent = textItem.text;
+            row.append(textCell);
+          }
+
+          if (instructionIndex === 0) {
+            const emotionCell = document.createElement("th");
+            emotionCell.scope = "rowgroup";
+            emotionCell.rowSpan = group.instructions.length;
+            emotionCell.className = "same-text-emotion-cell";
+            emotionCell.textContent = group.emotion;
+            row.append(emotionCell);
+          }
+
+          instructionCell.className = "same-text-instruction-cell";
+          instructionCell.lang = "ko";
+          instructionCell.textContent = instruction.instructionKo;
+          audioCell.classList.add("same-text-audio-cell");
+          geminiAudioCell.classList.add("same-text-audio-cell");
+          row.append(instructionCell, audioCell, geminiAudioCell);
+          body.append(row);
+          rowIndex += 1;
+        });
+      });
+    });
+
+    head.append(headRow);
+    table.className = "same-text-table";
+    table.setAttribute(
+      "aria-label",
+      "CLID-TTS and Gemini 3.1 Flash-TTS comparison using two fixed Korean texts and two Korean instructions per emotion"
+    );
+    table.append(colgroup, head, body);
+    wrap.className = "same-text-wrap";
+    wrap.append(table);
+    return wrap;
   }
 
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", init, { once: true });
-  } else {
-    init();
+  function renderSameTextSamples() {
+    const sampleList = document.getElementById("control-demo");
+    if (!sampleList || sameTextItems.length === 0 || sameTextInstructions.length === 0) {
+      showUnavailable(sampleList);
+      return;
+    }
+    sampleList.replaceChildren(makeSameTextTable());
   }
+
+  renderSamples();
+  renderKoreanBenchmarkSamples();
+  renderSameTextSamples();
 }());

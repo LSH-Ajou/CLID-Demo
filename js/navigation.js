@@ -11,13 +11,14 @@
     if (location.hash !== '#/' + page) history.replaceState(null, '', '#/' + page);
     window.CLIDAudio?.pauseAll();
     sections.forEach(section => { section.hidden = section.id !== page; });
+    window.CLIDAudio?.showPage(page);
     links.forEach(link => {
       if (link.dataset.route === page) link.setAttribute('aria-current', 'page');
       else link.removeAttribute('aria-current');
     });
     document.documentElement.classList.add('routed');
     document.documentElement.dataset.page = page;
-    document.title = 'CLID-TTS · ' + links.find(link => link.dataset.route === page).textContent;
+    document.title = 'CLID · ' + links.find(link => link.dataset.route === page).textContent;
     if (!initial && activePage !== page) {
       document.getElementById(page).querySelector('h2').focus({preventScroll:true});
       window.scrollTo({top:0,behavior:'instant'});
