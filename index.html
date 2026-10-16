@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="CLID-TTS: Cross-Lingual Instruction Distillation for Low-Resource Expressive Emotional Text-to-Speech. Explore the method, evaluation, and Korean emotional speech samples.">
+  <meta name="theme-color" content="#0066b3">
+  <title>CLID-TTS · Research Demo</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="assets/style.css">
+  <script src="data/samples.js" defer></script>
+  <script src="js/audio.js" defer></script>
+  <script src="js/navigation.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <div class="site-shell">
+    <header class="hero">
+      <div class="hero-brand">
+        <div class="university-mark"><img src="assets/ajou-mark.png" alt="Ajou University" width="880" height="533"></div>
+        <div>
+          <p class="eyebrow">Ajou University · Speech Synthesis</p>
+          <h1>CLID<span>-TTS</span></h1>
+          <p class="paper-title">Cross-Lingual Instruction Distillation for<br class="desktop-break"> Low-Resource Expressive Emotional Text-to-Speech</p>
+        </div>
+        <span class="research-label">Research Demo</span>
+      </div>
+      <div class="hero-bottom">
+        <p>Korean instructions. Expressive speech.</p>
+        <div class="project-links">
+          <a href="https://github.com/SpeechAI-Lab/CLID-TTS" target="_blank" rel="noopener">Code repository <span aria-hidden="true">↗</span></a>
+          <span class="coming-soon">Paper <span>coming soon</span></span>
+        </div>
+      </div>
+    </header>
+
+    <nav class="section-nav" aria-label="Main navigation">
+      <a href="#/overview" data-route="overview">Overview</a>
+      <a href="#/method" data-route="method">Method</a>
+      <a href="#/results" data-route="results">Results</a>
+      <a href="#/comparison" data-route="comparison">Model Comparison</a>
+      <a href="#/benchmark" data-route="benchmark">Korean Instructions</a>
+      <a href="#/control" data-route="control">Emotion Control</a>
+    </nav>
+
+    <main id="main" tabindex="-1">
+      <section class="page-section" id="overview" aria-labelledby="overview-title">
+        <div class="page-heading">
+          <p class="eyebrow">01 / Overview</p>
+          <h2 id="overview-title" tabindex="-1">Expressive speech,<br><span>guided by your language.</span></h2>
+          <p class="page-lead">Transferring instruction-following capabilities across languages for controllable Korean emotional text-to-speech.</p>
+          <div class="actions"><a class="button primary" href="#/comparison">Listen &amp; compare <span aria-hidden="true">→</span></a><a class="button" href="#/method">Explore the method</a></div>
+        </div>
+        <div class="overview-facts" aria-label="Demo contents">
+          <div><strong>6</strong><span>emotion categories</span></div>
+          <div><strong>144</strong><span>audio samples</span></div>
+          <div><strong>KO ↔ EN</strong><span>aligned instructions</span></div>
+        </div>
+        <div class="abstract-block">
+          <h3>Abstract</h3>
+          <div>
+            <p>Despite rapid progress, instruction-guided text-to-speech (TTS) systems still rely on paired expressive speech-instruction datasets for emotional speech generation. To alleviate this burden, we introduce a cross-lingual instruction distillation (CLID) method, which transfers the instruction-following capability of a pretrained TTS model across different instruction languages.</p>
+            <p>Using semantically aligned English-Korean instructions with the same spoken text, CLID distills the teacher’s speech-token distributions into a student. We further apply CFG to construct guided teacher targets and distill them into a Korean-SFT student, yielding CLID-TTS with improved emotion controllability and speech quality.</p>
+            <p>Experimental results demonstrate that CLID improves Korean instruction following without paired Korean instruction-speech data, while CLID-TTS further improves emotion classification accuracy and speech intelligibility.</p>
+          </div>
+        </div>
+        <div class="explore-links">
+          <a href="#/benchmark"><span><strong>Korean instruction following</strong><small>Compare CLID-TTS and Gemini with the same text and instruction.</small></span><span aria-hidden="true">↗</span></a>
+          <a href="#/control"><span><strong>Same text, different expressions</strong><small>Explore six emotions and two instruction variants per emotion.</small></span><span aria-hidden="true">↗</span></a>
+        </div>
+      </section>
+
+      <section class="page-section" id="method" aria-labelledby="method-title">
+        <div class="page-heading"><p class="eyebrow">02 / Method</p><h2 id="method-title" tabindex="-1">From aligned instructions<br>to expressive speech.</h2><p class="page-lead">CLID transfers instruction-following behavior across languages. CFG-guided distillation further shapes the teacher targets used to train CLID-TTS.</p></div>
+        <figure class="research-figure">
+          <a href="pics/clid_tts_overview.svg" target="_blank" rel="noopener" aria-label="Open the CLID-TTS framework at full size"><img src="pics/clid_tts_overview.svg" alt="CLID-TTS framework showing bilingual instruction pairs, cross-lingual instruction distillation, and CFG-guided target construction." width="954" height="411"></a>
+          <figcaption><strong>Figure 1.</strong> Overview framework of CLID-TTS. <a href="pics/clid_tts_overview.svg" target="_blank" rel="noopener">Open full-size figure ↗</a></figcaption>
+        </figure>
+        <ol class="method-steps">
+          <li><span class="step-number">01</span><div><h3>Bilingual instruction pairs</h3><p>Construct semantically aligned Korean and English instructions from Korean emotional speech. The spoken text is shared across the instruction languages.</p></div></li>
+          <li><span class="step-number">02</span><div><h3>Cross-lingual instruction distillation</h3><p>Align the teacher’s speech-token distributions under English instructions with the student’s distributions under Korean instructions.</p></div></li>
+          <li><span class="step-number">03</span><div><h3>CFG-guided teacher targets</h3><p>Apply classifier-free guidance to construct teacher targets and distill them into a Korean-SFT student, producing CLID-TTS.</p></div></li>
+        </ol>
+        <a class="text-link" href="#/comparison">Hear the model comparison <span aria-hidden="true">→</span></a>
+      </section>
+
+      <section class="page-section" id="results" aria-labelledby="results-title">
+        <div class="page-heading"><p class="eyebrow">03 / Results</p><h2 id="results-title" tabindex="-1">Objective &amp; subjective<br>emotion classification.</h2><p class="page-lead">Emotion2vec (E2V) predictions and listener judgments provide two views of emotional speech across six evaluated systems.</p></div>
+        <div class="table-scroll"><table class="results-table">
+          <caption>Overall emotion classification — values reported in the original demo’s Figure 2.</caption>
+          <thead><tr><th scope="col">System</th><th scope="col">Objective (E2V)</th><th scope="col">Subjective</th></tr></thead>
+          <tbody>
+            <tr class="ours"><th scope="row">CLID-TTS <span class="table-note">s = 2.0</span></th><td>52.17%</td><td>70.74%</td></tr>
+            <tr><th scope="row">GT</th><td>60.08%</td><td>57.62%</td></tr>
+            <tr><th scope="row">Gemini 3.1 Flash TTS</th><td>60.25%</td><td>80.25%</td></tr>
+            <tr><th scope="row">VoxCPM2</th><td>23.67%</td><td>35.01%</td></tr>
+            <tr><th scope="row">Qwen3-TTS-12Hz-1.7B-VD <span class="table-note">EN</span></th><td>58.50%</td><td>57.72%</td></tr>
+            <tr><th scope="row">Qwen3-TTS-12Hz-1.7B-VD <span class="table-note">KO</span></th><td>28.67%</td><td>36.20%</td></tr>
+          </tbody>
+        </table></div>
+        <figure class="research-figure results-figure">
+          <a href="pics/emo2vec_mos_confusion_comparison.svg" target="_blank" rel="noopener" aria-label="Open all emotion confusion matrices at full size"><img src="pics/emo2vec_mos_confusion_comparison.svg" alt="Objective and subjective row-normalized emotion confusion matrices for GT, Gemini, VoxCPM2, Qwen3-TTS VoiceDesign in English and Korean, and CLID-TTS." width="4200" height="1435"></a>
+          <figcaption><strong>Figure 2.</strong> Rows represent target emotions; columns represent predicted emotions. Each cell shows a row-normalized proportion. <a href="pics/emo2vec_mos_confusion_comparison.svg" target="_blank" rel="noopener">Open full-size figure ↗</a></figcaption>
+        </figure>
+        <p class="fine-print">Disgusted, Other, and Unknown E2V predictions are merged into Other. Subjective judgments use the six listener-selectable emotion labels. The systems in this figure differ from the audio comparison, which also includes CLID w/o CFG.</p>
+      </section>
+
+      <section class="page-section" id="comparison" aria-labelledby="comparison-title">
+        <div class="page-heading"><p class="eyebrow">04 / Model Comparison</p><h2 id="comparison-title" tabindex="-1">One instruction.<br>Six systems to compare.</h2><p class="page-lead">Choose an emotion to hear the same Korean text across ground truth and five synthesis systems. Inspect the Korean instruction and its English translation alongside the audio.</p></div>
+        <div id="comparison-demo"></div>
+      </section>
+
+      <section class="page-section" id="benchmark" aria-labelledby="benchmark-title">
+        <div class="page-heading"><p class="eyebrow">05 / Korean Instructions</p><h2 id="benchmark-title" tabindex="-1">Following the instruction,<br>across different voices.</h2><p class="page-lead">Thirty Korean examples, with five samples per emotion. CLID-TTS and Gemini 3.1 Flash-TTS use the same Korean text and instruction. English translations are provided for reference, not for inference.</p></div>
+        <div id="benchmark-demo"></div>
+      </section>
+
+      <section class="page-section" id="control" aria-labelledby="control-title">
+        <div class="page-heading"><p class="eyebrow">06 / Emotion Control</p><h2 id="control-title" tabindex="-1">Same words.<br>A different expression.</h2><p class="page-lead">Keep the spoken text fixed and explore six emotions, each with two Korean instruction variants. Compare CLID-TTS with Gemini 3.1 Flash-TTS.</p></div>
+        <p class="section-note">Instructions vary emotion, voice traits, and delivery together. No reference-speaker embedding is used; speaker traits are specified in the instruction.</p>
+        <div id="control-demo"></div>
+      </section>
+      <noscript><p class="section-note">Enable JavaScript to switch pages and explore the audio samples. You can also visit the <a href="https://speechai-lab.github.io/demo/clid-tts/">original CLID-TTS demo</a>.</p></noscript>
+    </main>
+    <footer><span>CLID-TTS <span class="footer-dot">·</span> Research demonstration</span><a href="https://speechai-lab.github.io/demo/clid-tts/" target="_blank" rel="noopener">Original demo ↗</a></footer>
+  </div>
+</body>
+</html>
